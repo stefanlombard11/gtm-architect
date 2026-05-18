@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GTM Campaign Architect - Decathlon Digital</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    /* Hide scrollbars for cleaner multi-step forms */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+
+  <!-- React & ReactDOM CDNs -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel Standalone for on-the-fly JSX compilation in Browser/Google Sites -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+
+  <!-- React Container -->
+  <div id="root"></div>
+
+  <!-- React Code with Babel Compilation -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const apiKey = ""; 
+
+    const SYSTEM_INSTRUCTION = `You are the "Senior GTM Mentor" at Decathlon. Your goal is to guide PMs through creating a professional, clear, and highly actionable strategy for EXTERNAL (Commercial/B2C) or INTERNAL (B2E/Tools) projects.
+
+# CORE RULES:
+1. **STRICT RESPECT FOR INPUT KPIs:** Do not add phantom, speculative, or unprovided secondary KPIs. If the user only provides a primary KPI (e.g., "Tool Usage %"), use exactly that. If they left secondary KPIs empty, state clearly: "Secondary KPIs: None defined. Recommended for future phases: [List 1-2 standard benchmarks, clearly labeled as recommendations]."
+2. **TIMELINE LOGIC:** Make the timeline appropriate for the campaign type:
+   - Product Launch: 3-6 months.
+   - Feature Launch: 4-8 weeks.
+   - Process Update: 2-4 weeks.
+3. **ELIMINATE DUPLICATION:** Do not repeat the exact input text. Instead, synthesize, contextualize, and expand into concrete, step-by-step action items.
+4. **FORMATTING:** Output clean, professional sections. Use headers (##) for sections. Do not use raw asterisks (**) inside headers. Ensure bullet points are clear and actionable.
+
+# OUTPUT STRUCTURE (Strictly Follow for UI Parsing):
+## EXECUTIVE SUMMARY
+Provide a punchy summary of the strategic angle and success criteria.
+## BEHAVIORAL CHANGE
+Contrast Current Behavior (Old Way) vs Expected Behavior (New Way). Identify the Main Barrier.
+## STRATEGIC OBJECTIVES & KPIs
+List the primary objective, success definitions, and exact user-provided KPIs.
+## CHANNEL & ENABLEMENT PLAN
+List specific, non-generic touchpoints for internal and external stakeholders.
+## PMM CHECKLIST: NEXT STEPS
+Provide 5-7 ultra-clear, detailed steps the PM must take RIGHT NOW to launch.
+## RISK MITIGATION
+Identify top risks and specific mitigation actions.`;
+
+    function App() {
+      const [currentStep, setCurrentStep] = useState(0);
+      const [loading, setLoading] = useState(false);
+      const [strategy, setStrategy] = useState('');
+      const [chatOpen, setChatOpen] = useState(true);
+      const [messages, setChatMessages] = useState([]);
+      const [input, setInput] = useState("");
+
+      const [formData, setFormData] = useState({
+        campaignName: '', campaignType: 'Product Launch', scope: 'Global', 
+        gtmFocus: 'Customer-driven', markets: '', marketDifferences: '',
+        primaryObjective: [], primaryObjectiveOtherText: '', successDefinition: '', primaryKpi: '', secondaryKpi: '',
+        promoting: '', keyBenefit: '', targetAudience: '', mainAction: '', biggestRisk: '',
+        whyNow: '', launchDate: '', channels: [], channelsOtherText: '', 
+        storeInvolvement: 'None', constraints: '', internalRequired: 'No', 
+        internalMessage: '', internalSupport: [], internalBarriers: ''
+      });
+
+      // --- SVG Icons to replace external lucide dependencies ---
+      const Icons = {
+        Rocket: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 5.84l-1.9 1.9a1 1 0 01-1.41-1.41l1.9-1.9a6 6 0 015.84-5.84h1.41v1.41zm3.89-6.36a3 3 0 11-4.24-4.24 3 3 0 014.24 4.24zm-.35 1.06l-4.25 4.25-1.41-1.41 4.25-4.25 1.41 1.41zm-10.6 10.6a2 2 0 10-2.83-2.83 2 2 0 002.83 2.83z"/></svg>,
+        ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>,
+        ChevronLeft: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>,
+        Layout: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>,
+        Store: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>,
+        Smartphone: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>,
+        CheckCircle2: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+        ArrowRightLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>,
+        Target: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 2 12 22ZM12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z"/></svg>,
+        PlusCircle: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+        Copy: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>,
+        HelpCircle: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+        RotateCcw: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 12H19c0 .28-.05.55-.15.8"/></svg>,
+        X: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>,
+        MessageSquare: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>,
+        Send: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>,
+        Flag: () => <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg>,
+        Layers: () => <svg className="w-40 h-40" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>,
+        Zap: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,
+        Sparkles: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>,
+        Activity: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 00-2 2h-2a2 2 0 00-2-2z"/></svg>
+      };
+
+      const steps = [
+        { title: "Foundation", icon: <Icons.Layout />, id: 0 },
+        { title: "Success", icon: <Icons.Target />, id: 1 },
+        { title: "Solution", icon: <Icons.Rocket />, id: 2 },
+        { title: "Execution", icon: <Icons.Smartphone />, id: 3 },
+        { title: "Internal", icon: <Icons.Store />, id: 4 },
+        { title: "Strategy", icon: <Icons.Sparkles />, disabled: !strategy, id: 5 }
+      ];
+
+      // --- SAFE LOCAL STORAGE PERSISTENCE ---
+      useEffect(() => {
+        try {
+          const savedData = localStorage.getItem('gtm_formData_v2');
+          const savedStrategy = localStorage.getItem('gtm_strategy_v2');
+          const savedStep = localStorage.getItem('gtm_currentStep_v2');
+          const savedMsgs = localStorage.getItem('gtm_messages_v2');
+          
+          if (savedData) setFormData(JSON.parse(savedData));
+          if (savedStrategy) setStrategy(savedStrategy);
+          if (savedStep) setCurrentStep(parseInt(savedStep, 10));
+          if (savedMsgs) setChatMessages(JSON.parse(savedMsgs));
+        } catch (e) {
+          console.warn("localStorage read failed: ", e);
+        }
+      }, []);
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('gtm_formData_v2', JSON.stringify(formData));
+        } catch (e) {}
+      }, [formData]);
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('gtm_strategy_v2', strategy);
+        } catch (e) {}
+      }, [strategy]);
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('gtm_currentStep_v2', currentStep.toString());
+        } catch (e) {}
+      }, [currentStep]);
+
+      useEffect(() => {
+        try {
+          localStorage.setItem('gtm_messages_v2', JSON.stringify(messages));
+        } catch (e) {}
+      }, [messages]);
+
+      const handleUpdate = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
+      const handleToggle = (field, value) => {
+        const list = formData[field];
+        const newList = list.includes(value) ? list.filter(v => v !== value) : [...list, value];
+        setFormData(prev => ({ ...prev, [field]: newList }));
+      };
+
+      const generateStrategy = async () => {
+        setLoading(true);
+        const processedObjectives = formData.primaryObjective.map(obj => 
+            obj === 'Other' ? `Other: ${formData.primaryObjectiveOtherText}` : obj
+        );
+        const processedChannels = formData.channels.map(ch => 
+            ch === 'Other' ? `Other: ${formData.channelsOtherText}` : ch
+        );
+
+        const promptData = { 
+            ...formData, 
+            primaryObjective: processedObjectives,
+            channels: processedChannels
+        };
+
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `Generate Decathlon GTM Plan: ${JSON.stringify(promptData)}` }] }],
+              systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] }
+            })
+          });
+          const data = await response.json();
+          setStrategy(data.candidates[0].content.parts[0].text);
+          setCurrentStep(5);
+          
+          setChatMessages([{ 
+            role: 'ai', 
+            text: "I've generated your strategy based strictly on your guidelines. To prevent any unrealistic assumptions, let's refine this: Are there any specific local team bandwidth limits or technical constraints we need to detail further in the Next Steps checklist?" 
+          }]);
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+      };
+
+      const sendChatMessage = async () => {
+        if (!input.trim()) return;
+        const newMsgs = [...messages, { role: 'user', text: input }];
+        setChatMessages(newMsgs);
+        setInput("");
+        try {
+          const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `Strategy Context: ${strategy}\n\nUser Feedback: ${input}` }] }],
+              systemInstruction: { parts: [{ text: "You are the Senior PMM. Help the PM refine their strategy. Keep your responses highly actionable, short, and ask one deep-dive question to solve gaps." }] }
+            })
+          });
+          const data = await resp.json();
+          setChatMessages([...newMsgs, { role: 'ai', text: data.candidates[0].content.parts[0].text }]);
+        } catch (e) { console.error(e); }
+      };
+
+      const resetApp = () => {
+        try {
+          localStorage.removeItem('gtm_formData_v2');
+          localStorage.removeItem('gtm_strategy_v2');
+          localStorage.removeItem('gtm_currentStep_v2');
+          localStorage.removeItem('gtm_messages_v2');
+        } catch (e) {}
+        window.location.reload();
+      };
+
+      // --- CUSTOM MARKDOWN / BOLD PARSER ---
+      const renderText = (text, isDarkBg = false) => {
+        if (!text) return null;
+        
+        let cleanedText = text.replace(/\*\s+\*\*/g, '**').replace(/\*\* \*\*/g, '');
+        const lines = cleanedText.split('\n');
+        
+        return lines.map((line, lineIdx) => {
+          const isBullet = line.trim().startsWith('*') || line.trim().startsWith('-');
+          const cleanLine = isBullet ? line.trim().replace(/^[\*\-]\s+/, '') : line;
+          
+          const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
+          const elements = parts.map((part, partIdx) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return (
+                <strong key={partIdx} className={`font-bold ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
+                  {part.slice(2, -2)}
+                </strong>
+              );
+            }
+            return part;
+          });
+
+          if (isBullet) {
+            return (
+              <li key={lineIdx} className={`ml-4 list-disc pl-1 mb-1.5 ${isDarkBg ? 'text-slate-200' : 'text-slate-700'}`}>
+                {elements}
+              </li>
+            );
+          }
+
+          return (
+            <p key={lineIdx} className={cleanLine.trim() ? `mb-2 ${isDarkBg ? 'text-slate-200' : 'text-slate-700'} leading-relaxed` : "h-2"}>
+              {elements}
+            </p>
+          );
+        });
+      };
+
+      const parseStrategy = (text) => {
+        if (!text) return [];
+        let normalized = text.replace(/^##\s+\[SECTION\]/gim, '##');
+        return normalized.split(/^##\s+/m).filter(s => s.trim()).map(section => {
+          const lines = section.split('\n');
+          const title = lines[0].replace(/\[SECTION\]/g, '').trim();
+          const content = lines.slice(1).join('\n').trim();
+          return { title, content };
+        });
+      };
+
+      const renderField = (label, id, type = "text", placeholder = "", options = null) => (
+        <div className="space-y-1.5 w-full text-left">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
+          {type === "select" ? (
+            <select value={formData[id]} onChange={e => handleUpdate(id, e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3643BA] outline-none text-sm font-medium text-slate-700">
+              {options.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          ) : type === "textarea" ? (
+            <textarea value={formData[id]} onChange={e => handleUpdate(id, e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3643BA] outline-none text-sm" rows="3" placeholder={placeholder} />
+          ) : (
+            <input type={type} value={formData[id]} onChange={e => handleUpdate(id, e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3643BA] outline-none text-sm font-medium" placeholder={placeholder} />
+          )}
+        </div>
+      );
+
+      return (
+        <div className="min-h-screen bg-slate-50 text-slate-900 font-['Plus_Jakarta_Sans'] selection:bg-[#7AFFA6]">
+          <nav className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+            <div className="flex items-center gap-3">
+              <div className="bg-[#3643BA] p-2 rounded-xl text-white shadow-lg shadow-[#3643BA]/20"><Icons.Rocket /></div>
+              <h1 className="font-extrabold text-lg uppercase tracking-tight">GTM Architect</h1>
+            </div>
+            <div className="flex items-center gap-3">
+                <button onClick={resetApp} className="text-xs font-bold text-slate-500 hover:text-red-600 flex items-center gap-1.5 transition-colors">
+                  <Icons.RotateCcw /> Start Fresh
+                </button>
+                <div className="h-4 w-px bg-slate-200" />
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full">Decathlon Senior Mentor</span>
+            </div>
+          </nav>
+
+          <main className="max-w-7xl mx-auto px-4 py-8">
+            {/* Universal Stepper */}
+            <div className="flex justify-between items-center mb-8 px-2 overflow-x-auto gap-4 pb-2 no-scrollbar max-w-4xl mx-auto">
+              {steps.map((s, i) => (
+                <button key={i} disabled={s.disabled} onClick={() => setCurrentStep(i)} className={`flex flex-col items-center gap-2 min-w-[90px] transition-all duration-300 ${s.disabled ? 'opacity-20 cursor-not-allowed' : 'opacity-100 hover:scale-105'}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${currentStep === i ? 'bg-[#3643BA] border-[#3643BA] text-white shadow-xl shadow-[#3643BA]/20' : strategy && i < 5 ? 'bg-[#7AFFA6] border-[#7AFFA6] text-slate-900' : 'bg-white border-slate-200 text-slate-400'}`}>
+                    {strategy && i < 5 ? <Icons.CheckCircle2 /> : s.icon}
+                  </div>
+                  <span className={`text-[8px] font-black uppercase tracking-widest ${currentStep === i ? 'text-[#3643BA]' : 'text-slate-400'}`}>{s.title}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-200/50 overflow-hidden min-h-[600px] flex flex-col relative transition-all duration-500 max-w-7xl mx-auto">
+              {currentStep < 5 && (
+                <div className="bg-slate-900 p-5 text-white flex items-start gap-4">
+                   <Icons.HelpCircle />
+                   <div className="space-y-1">
+                     <p className="text-xs font-bold text-[#7AFFA6] uppercase tracking-wider">Guidelines for overall use</p>
+                     <p className="text-[11px] leading-relaxed opacity-80 text-left">
+                       Provide **highly concise, factual answers and short examples**. For internal feature or product updates, focus directly on teammate task simplification. Avoid long descriptive copy.
+                     </p>
+                   </div>
+                </div>
+              )}
+
+              {loading ? (
+                <div className="flex-grow flex flex-col items-center justify-center p-20 space-y-6">
+                  <div className="w-14 h-14 border-4 border-slate-100 border-t-[#3643BA] rounded-full animate-spin"></div>
+                  <div className="text-center animate-pulse">
+                    <p className="text-sm font-black text-[#3643BA] uppercase tracking-widest">Architecting Strategy...</p>
+                    <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-tighter">Analyzing behavioral barriers and kpi logic</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-grow">
+                  {currentStep === 0 && (
+                    <div className="p-8 md:p-12 space-y-8 animate-in fade-in max-w-4xl mx-auto">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          {renderField("Project Name *", "campaignName", "text", "e.g., Offer Catalog MVP")}
+                          {renderField("Type *", "campaignType", "select", "", ["Product Launch", "Feature Launch", "Process Update", "Experience Rollout"])}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          {renderField("Primary Driver *", "gtmFocus", "select", "", ["Customer-driven", "Internal adoption-driven", "Both equally important"])}
+                          {renderField("Launch Date", "launchDate", "date")}
+                      </div>
+                      {renderField("Why now? (Be highly concise)", "whyNow", "textarea", "e.g. standardizing the seasonal selection process globally, avoiding manual consolidated spreadsheets...")}
+                    </div>
+                  )}
+
+                  {currentStep === 1 && (
+                    <div className="p-8 md:p-12 space-y-8 animate-in fade-in text-left max-w-4xl mx-auto">
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Primary Objective *</label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {['Revenue', 'Adoption %', 'Time Saved', 'Compliance', 'Retention', 'Other'].map(obj => (
+                            <button key={obj} onClick={() => handleToggle('primaryObjective', obj)} className={`p-4 text-[10px] font-bold border-2 rounded-2xl transition-all ${formData.primaryObjective.includes(obj) ? 'bg-[#3643BA] border-[#3643BA] text-white shadow-md' : 'bg-white border-slate-100 text-slate-500 hover:border-[#3643BA]/30'}`}>{obj}</button>
+                          ))}
+                        </div>
+                        {formData.primaryObjective.includes('Other') && (
+                            <input type="text" value={formData.primaryObjectiveOtherText} onChange={e => handleUpdate('primaryObjectiveOtherText', e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3643BA] outline-none text-xs font-medium" placeholder="Specify objective..." />
+                        )}
+                      </div>
+                      {renderField("Success Definition (e.g. 'Sell out in 5 days' or '60% adoption rate before EOM')", "successDefinition", "textarea", "Be highly concise...")}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {renderField("Primary KPI *", "primaryKpi", "text", "e.g., % Tool Usage")}
+                        {renderField("Secondary (Optional - leave blank if none)", "secondaryKpi", "text", "Do not invent placeholder KPIs.")}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 2 && (
+                    <div className="p-8 md:p-12 space-y-8 animate-in fade-in max-w-4xl mx-auto">
+                      {renderField("What is being promoted / changed? * (Be concise)", "promoting", "textarea", "Describe what is new.")}
+                      {renderField("Key Benefit (User/Teammate) *", "keyBenefit", "textarea", "What's in it for the user/customer?")}
+                      {renderField("Target Audience / Stakeholders", "targetAudience", "textarea", "e.g. PMs and Category Managers, in-store teams...")}
+                      {renderField("Desired Main Action", "mainAction", "text", "The ONE action they must take.")}
+                    </div>
+                  )}
+
+                  {currentStep === 3 && (
+                    <div className="p-8 md:p-12 space-y-8 animate-in fade-in max-w-4xl mx-auto">
+                      <div className="space-y-4 text-left">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Channels</label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {['Website', 'Mobile App', 'CRM', 'Paid Media', 'Store', 'Internal Alignment', 'Other'].map(c => (
+                            <button key={c} onClick={() => handleToggle('channels', c)} className={`p-4 text-[10px] font-bold border-2 rounded-2xl transition-all ${formData.channels.includes(c) ? 'bg-[#3643BA] border-[#3643BA] text-white shadow-md' : 'bg-white border-slate-100 text-slate-500 hover:border-[#3643BA]/30'}`}>{c}</button>
+                            ))}
+                        </div>
+                        {formData.channels.includes('Other') && (
+                            <input type="text" value={formData.channelsOtherText} onChange={e => handleUpdate('channelsOtherText', e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3643BA] outline-none text-xs font-medium" placeholder="Specify other channels..." />
+                        )}
+                      </div>
+                      {renderField("Constraints & Blockers (e.g. budget, stock, technical limitations)", "constraints", "textarea", "Be highly concise...")}
+                    </div>
+                  )}
+
+                  {currentStep === 4 && (
+                    <div className="p-8 md:p-12 space-y-8 animate-in fade-in text-left max-w-4xl mx-auto">
+                      {renderField("Internal Activation Level", "storeInvolvement", "select", "", ["None", "Light (Comms)", "Strong (Process Change)"])}
+                      {renderField("Teammate Message (WIIFM)", "internalMessage", "text", "The punchy hook for teams.")}
+                      {renderField("Adoption Barriers (Be highly concise)", "internalBarriers", "textarea", "e.g. competing priorities, low awareness...")}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-4">
+                        {['Training Video', 'Signage', 'Slack Kit', 'CIS Pop-up'].map(s => (
+                          <button key={s} onClick={() => handleToggle('internalSupport', s)} className={`p-3 text-[10px] font-bold border-2 rounded-xl transition-all ${formData.internalSupport.includes(s) ? 'bg-[#3643BA] border-[#3643BA] text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400'}`}>{s}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STRATEGY DISPLAY */}
+                  {currentStep === 5 && (
+                    <div className="animate-in slide-in-from-bottom-4 duration-500 text-left flex flex-col lg:flex-row min-h-[70vh]">
+                      
+                      {/* Left Side: Strategy Dashboard */}
+                      <div className="flex-grow lg:w-2/3 border-r border-slate-200 bg-white">
+                        <div className="bg-[#3643BA] p-8 text-white">
+                          <div className="flex justify-between items-start">
+                              <div>
+                                  <h2 className="text-3xl font-black tracking-tight uppercase leading-none mb-1">{formData.campaignName || "Untitled Project"}</h2>
+                                  <div className="flex gap-4 mt-3">
+                                      <span className="text-[9px] font-bold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full border border-white/10">{formData.campaignType}</span>
+                                      <span className="text-[9px] font-bold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full border border-white/10">{formData.scope}</span>
+                                  </div>
+                              </div>
+                              <button onClick={() => { navigator.clipboard.writeText(strategy); }} className="p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-all border border-white/10 group"><Icons.Copy /></button>
+                          </div>
+                        </div>
+
+                        <div className="p-8 space-y-12 max-h-[70vh] overflow-y-auto">
+                          {parseStrategy(strategy).map((section, idx) => (
+                            <div key={idx} className="group animate-in fade-in" style={{ animationDelay: `${idx * 150}ms` }}>
+                              <div className="flex items-center gap-3 mb-6">
+                                  <div className="w-8 h-8 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center text-[#3643BA] font-black text-xs">
+                                      {idx + 1}
+                                  </div>
+                                  <h3 className="text-sm font-black text-[#3643BA] uppercase tracking-widest">{section.title}</h3>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 gap-6">
+                                  {section.title.includes("BEHAVIORAL") ? (
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+                                          <div className="p-8 bg-slate-50 border border-slate-200 rounded-[2.5rem] text-sm leading-relaxed text-slate-600 italic relative overflow-hidden shadow-inner">
+                                              <div className="text-[10px] font-black uppercase text-[#3643BA] mb-3 flex items-center gap-2"><Icons.ArrowRightLeft /> Historically (Barrier)</div>
+                                              {renderText(section.content.split('Expected Behavior')[0].replace('Current Behavior:', '').trim(), false)}
+                                          </div>
+                                          <div className="p-8 bg-[#7AFFA6]/15 border border-[#7AFFA6]/30 rounded-[2.5rem] text-sm leading-relaxed text-slate-700 font-medium relative overflow-hidden shadow-sm">
+                                              <div className="text-[10px] font-black uppercase text-[#3643BA] mb-3 flex items-center gap-2"><Icons.Flag /> Desired Goal (Win)</div>
+                                              {renderText(section.content.split('Expected Behavior:')[1]?.trim() || section.content, false)}
+                                          </div>
+                                      </div>
+                                  ) : section.title.includes("CHECKLIST") ? (
+                                      <div className="bg-[#3643BA] rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden border border-white/10">
+                                          <div className="absolute top-0 right-0 p-8 opacity-5"><Icons.Layers /></div>
+                                          <div className="space-y-4 relative z-10">
+                                              {section.content.split('\n').filter(l => l.trim()).map((item, i) => (
+                                                  <div key={i} className="flex items-start gap-4 p-3 border-b border-white/5 last:border-0 hover:bg-white/5 transition-all rounded-2xl">
+                                                      <div className="w-6 h-6 rounded-full bg-[#7AFFA6] text-slate-900 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">{i + 1}</div>
+                                                      <div className="text-sm leading-relaxed text-white">{renderText(item.replace(/^[0-9.-]+/, '').trim(), true)}</div>
+                                                  </div>
+                                              ))}
+                                          </div>
+                                          <div className="mt-10 pt-6 border-t border-white/10 flex justify-between items-center text-[#7AFFA6]">
+                                              <div className="flex items-center gap-2">
+                                                  <Icons.Zap />
+                                                  <span className="text-[9px] font-black uppercase tracking-widest">Adoption Roadmap Active</span>
+                                              </div>
+                                              <button onClick={() => { navigator.clipboard.writeText(section.content); }} className="text-[10px] font-bold hover:underline">Copy Steps</button>
+                                          </div>
+                                      </div>
+                                  ) : (
+                                      <div className="p-8 bg-slate-50 border border-slate-100 rounded-[2.5rem] text-sm leading-relaxed text-slate-700 whitespace-pre-wrap shadow-inner">
+                                          {renderText(section.content, false)}
+                                      </div>
+                                  )}
+                              </div>
+                            </div>
+                          ))}
+                          
+                          <div className="pt-12 border-t border-slate-100 text-center space-y-4">
+                              <button onClick={resetApp} className="text-[10px] font-black text-slate-400 hover:text-red-500 uppercase tracking-[0.3em] transition-all">Discard and Start New Brief</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Side: Interactive Consultant Chat */}
+                      <div className="lg:w-1/3 flex flex-col bg-slate-50 border-l border-slate-200">
+                        <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
+                          <div>
+                            <h3 className="font-black uppercase tracking-tight text-sm flex items-center gap-1.5"><Icons.MessageSquare /> GTM Consultant</h3>
+                            <p className="text-[9px] font-bold text-[#7AFFA6] uppercase tracking-widest mt-1">Avoiding Assumptions & Hallucinations</p>
+                          </div>
+                        </div>
+                        <div className="flex-grow p-6 overflow-y-auto space-y-6 max-h-[50vh] lg:max-h-[60vh]">
+                          {messages.map((m, i) => (
+                            <div key={i} className={`p-4 rounded-2xl text-xs leading-relaxed max-w-[90%] shadow-sm ${m.role === 'user' ? 'bg-[#3643BA] text-white ml-auto rounded-tr-none' : 'bg-white text-slate-700 mr-auto rounded-tl-none border border-slate-200'}`}>
+                              {renderText(m.text, false)}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="p-4 border-t bg-white flex gap-2">
+                          <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendChatMessage()} className="flex-grow text-xs p-3.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3643BA] outline-none transition-all" placeholder="e.g. Rework step 3 checklist..." />
+                          <button onClick={sendChatMessage} className="bg-[#3643BA] text-white p-3.5 rounded-xl shadow-lg hover:scale-105 transition-all"><Icons.Send /></button>
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Navigation Controls */}
+              {currentStep < 5 && !loading && (
+                <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                  <button onClick={() => setCurrentStep(prev => prev - 1)} disabled={currentStep === 0} className="flex items-center gap-2 text-slate-400 font-bold text-xs disabled:opacity-0 transition-all uppercase tracking-widest">
+                    <Icons.ChevronLeft /> Back
+                  </button>
+                  <button onClick={currentStep === 4 ? generateStrategy : () => setCurrentStep(prev => prev + 1)} className="flex items-center gap-2 bg-[#3643BA] text-white px-10 py-5 rounded-2xl font-bold text-xs hover:bg-[#3643BA]/90 transition-all shadow-xl shadow-[#3643BA]/20 uppercase tracking-widest">
+                    {currentStep === 4 ? 'Build Strategy' : 'Next Step'} <Icons.ChevronRight />
+                  </button>
+                </div>
+              )}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+  </script>
+</body>
+</html>
