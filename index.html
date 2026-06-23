@@ -31,13 +31,13 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
   <!-- Babel Standalone for on-the-fly JSX compilation in Browser/Google Sites -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
 
   <div id="root"></div>
 
-  <script type="text/babel">
+  <script type="text/babel" data-presets="react,env">
     const { useState, useEffect } = React;
 
     function App() {
@@ -47,6 +47,7 @@
       const [chatOpen, setChatOpen] = useState(true);
       const [messages, setChatMessages] = useState([]);
       const [input, setInput] = useState("");
+      const [copied, setCopied] = useState(false);
 
       const [formData, setFormData] = useState({
         campaignName: '', campaignType: 'Product Launch', scope: 'Global', 
@@ -92,6 +93,27 @@
         { title: "Internal", icon: () => <Icons.Store />, id: 4 },
         { title: "Strategy", icon: () => <Icons.Sparkles />, disabled: !strategy, id: 5 }
       ];
+
+      // iFrame Safe Copy Function
+      const copyToClipboard = (text) => {
+        try {
+          const textArea = document.createElement("textarea");
+          textArea.value = text;
+          textArea.style.top = "0";
+          textArea.style.left = "0";
+          textArea.style.position = "fixed";
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+          console.error("Failed to copy", err);
+        }
+      };
 
       // Safe save to LocalStorage for full persistence
       useEffect(() => {
@@ -221,7 +243,6 @@ Here is your highly detailed, actionable **${timelineText}** GTM preparation pla
         }, 1000);
       };
 
-      // Interactive, robust offline rule-based GTM coach
       const sendChatMessage = () => {
         if (!input.trim()) return;
         const newMsgs = [...messages, { role: 'user', text: input }];
@@ -263,7 +284,6 @@ Here is your highly detailed, actionable **${timelineText}** GTM preparation pla
         window.location.reload();
       };
 
-      // Clean HTML Bold Parser
       const renderText = (text, isDarkBg = false) => {
         if (!text) return null;
         let cleanedText = text.replace(/\*\s+\*\*/g, '**').replace(/\*\* \*\*/g, '');
@@ -301,7 +321,6 @@ Here is your highly detailed, actionable **${timelineText}** GTM preparation pla
         });
       };
 
-      // Safe, Robust Regex Behavioral block extractor to prevent duplication errors
       const parseBehavioralContent = (content) => {
         const historicallyRegex = /(?:Historically|Old Way|Current Behavior)[\s\S]*?(?=(?:Expected Behavior|Desired Goal|New Way|$))/i;
         const targetRegex = /(?:Expected Behavior|Desired Goal|New Way)[\s\S]*$/i;
@@ -362,7 +381,6 @@ Here is your highly detailed, actionable **${timelineText}** GTM preparation pla
           </nav>
 
           <main className="max-w-7xl mx-auto px-4 py-8">
-            {/* Universal Stepper */}
             <div className="flex justify-between items-center mb-8 px-2 overflow-x-auto gap-4 pb-2 no-scrollbar max-w-4xl mx-auto">
               {steps.map((s, i) => (
                 <button key={i} disabled={s.disabled} onClick={() => setCurrentStep(i)} className={`flex flex-col items-center gap-2 min-w-[90px] transition-all duration-300 ${s.disabled ? 'opacity-20 cursor-not-allowed' : 'opacity-100 hover:scale-105'}`}>
@@ -471,11 +489,8 @@ Here is your highly detailed, actionable **${timelineText}** GTM preparation pla
                     </div>
                   )}
 
-                  {/* STRATEGY DISPLAY (Side-by-Side Clean Layout) */}
                   {currentStep === 5 && (
                     <div className="animate-in slide-in-from-bottom-4 duration-500 text-left flex flex-col lg:flex-row min-h-[70vh]">
-                      
-                      {/* Left Side: Strategy Dashboard */}
                       <div className="flex-grow lg:w-2/3 border-r border-slate-200 bg-white">
                         <div className="bg-[#3643BA] p-8 text-white">
                           <div className="flex justify-between items-start">
@@ -486,7 +501,9 @@ Here is your highly detailed, actionable **${timelineText}** GTM preparation pla
                                       <span className="text-[9px] font-bold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full border border-white/10">{formData.scope}</span>
                                   </div>
                               </div>
-                              <button onClick={() => { navigator.clipboard.writeText(strategy); }} className="p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-all border border-white/10 group"><Icons.Copy /></button>
+                              <button onClick={() => copyToClipboard(strategy)} className="p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-all border border-white/10 group flex items-center gap-2">
+                                {copied ? <span className="text-[10px] font-bold">Copied!</span> : <Icons.Copy />}
+                              </button>
                           </div>
                         </div>
 
@@ -533,7 +550,9 @@ Here is your highly detailed, actionable **${timelineText}** GTM preparation pla
                                                     <Icons.Zap />
                                                     <span className="text-[9px] font-black uppercase tracking-widest">Adoption Roadmap Active</span>
                                                 </div>
-                                                <button onClick={() => { navigator.clipboard.writeText(section.content); }} className="text-[10px] font-bold hover:underline">Copy Steps</button>
+                                                <button onClick={() => copyToClipboard(section.content)} className="text-[10px] font-bold hover:underline">
+                                                  Copy Steps
+                                                </button>
                                             </div>
                                         </div>
                                     ) : (
@@ -552,7 +571,6 @@ Here is your highly detailed, actionable **${timelineText}** GTM preparation pla
                         </div>
                       </div>
 
-                      {/* Right Side: Interactive Consultant Chat */}
                       <div className="lg:w-1/3 flex flex-col bg-slate-50 border-l border-slate-200">
                         <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
                           <div>
@@ -578,7 +596,6 @@ Here is your highly detailed, actionable **${timelineText}** GTM preparation pla
                 </div>
               )}
 
-              {/* Navigation Controls */}
               {currentStep < 5 && !loading && (
                 <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
                   <button onClick={() => setCurrentStep(prev => prev - 1)} disabled={currentStep === 0} className="flex items-center gap-2 text-slate-400 font-bold text-xs disabled:opacity-0 transition-all uppercase tracking-widest">
