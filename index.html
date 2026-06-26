@@ -159,80 +159,67 @@
       };
 
       // --- HIGH FIDELITY OFFLINE GTM ENGINE ---
-      const generateStrategy = () => {
+const generateStrategy = () => {
         setLoading(true);
         setTimeout(() => {
-          const timelineText = formData.campaignType === 'Product Launch' ? '12-Week Product Launch Roadmap' :
-                               formData.campaignType === 'Feature Launch' ? '6-Week Feature Launch Roadmap' :
-                               formData.campaignType === 'Process Update' ? '3-Week Process Update Roadmap' : '4-Week Deployment Roadmap';
-                           
-          const step1Time = formData.campaignType === 'Product Launch' ? 'Weeks 1-4' : 'Week 1';
-          const step2Time = formData.campaignType === 'Product Launch' ? 'Weeks 5-8' : 'Weeks 2-3';
-          const step3Time = formData.campaignType === 'Product Launch' ? 'Weeks 9-12' : 'Weeks 4-6';
+          
+          // Determine Decathlon GTM Tier based on scope/type
+          const gtmTier = formData.campaignType === 'Product Launch' || formData.scope === 'Global' 
+            ? 'Tier 1 (Killer Feature / Major Launch)' 
+            : formData.campaignType === 'Process Update' 
+            ? 'Tier 3 (Small Improvement / Maintenance)' 
+            : 'Tier 2 (Standard Feature / Growth)';
 
-          const generatedContent = `## EXECUTIVE SUMMARY
-Our primary goal is to drive the **${formData.primaryObjective.join(', ') || 'Project Adoption'}** framework for the proposed initiative: **${formData.campaignName || 'the targeted initiative'}** by launch date **${formData.launchDate || 'the targeted date'}**.
-By resolving the core operational need: *"${formData.whyNow || 'strategic alignment'}"*, we position this GTM approach to deliver its main value proposition: **${formData.keyBenefit || 'improved workflow efficiency'}**.
-Success is precisely defined as: **${formData.successDefinition || 'achieving defined project milestones'}**.
+          const generatedPrompt = `Act as a Senior Product Marketing Manager at Decathlon. Your task is to generate a comprehensive, highly customized Go-To-Market (GTM) Strategy for a new initiative. 
 
-## BEHAVIORAL CHANGE
-Historically, our target audience has struggled with specific barriers: **${formData.internalBarriers || formData.constraints || 'competing priorities, manual processes, or low awareness'}**.
-* **Current Behavior:** Users and teammates rely heavily on manual, offline, or disconnected legacy processes, which results in significant friction.
-* **Expected Behavior:** Users and teammates seamlessly transition to adopt **${formData.mainAction || 'the new workflow/tool'}**, securing structured compliance and optimized operational cycle times.
+Do NOT use generic marketing fluff. Provide actionable, Decathlon-specific operational steps, realistic timelines, and tangible KPIs.
 
-## STRATEGIC OBJECTIVES & KPIs
-* **Primary Objective:** ${formData.primaryObjective.join(', ') || 'Process Optimization'}
-* **Primary KPI (User Defined):** **${formData.primaryKpi || 'Adoption Rate %'}**
-* **Secondary KPI (User Defined):** **${formData.secondaryKpi || 'None Specified'}**
+Here is the strategic brief for the project:
 
-### MENTOR RECOMMENDATIONS:
-* **Operational Adoption Metric:** Monitor weekly active usage frequencies to trace ongoing system validation.
-* **Continuous Feedback Loop:** Automatically distribute localized CSAT surveys via Medallia post-use to flag and mitigate early usability gaps.
+## 1. PROJECT FOUNDATION
+* **Project Name:** ${formData.campaignName || 'Unnamed Initiative'}
+* **Launch Type:** ${formData.campaignType} (${gtmTier})
+* **Target Scope:** ${formData.scope}
+* **Target Launch Date:** ${formData.launchDate || 'TBD'}
+* **Why Now (The Catalyst):** ${formData.whyNow || 'Strategic alignment needed.'}
+* **What is changing/being promoted:** ${formData.promoting || 'A new feature or process.'}
 
-## CHANNEL & ENABLEMENT PLAN
-To successfully launch this update across **${formData.markets || 'all targeted markets'}**, we will activate the following touchpoints:
-${formData.channels.map(c => `* **${c}:** Configure dedicated delivery, localized guidelines, and tracking mechanisms tailored for ${c}.`).join('\n')}
+## 2. VALUE PROPOSITION & AUDIENCE
+* **Primary Target Audience:** ${formData.targetAudience || 'Internal teammates and/or end-users.'}
+* **Core Benefit (WIIFM - What's In It For Me?):** ${formData.keyBenefit || 'Improved efficiency and performance.'}
+* **Desired Main Action:** ${formData.mainAction || 'Adoption of the new process.'}
+* **Adoption Barriers to Overcome:** ${formData.internalBarriers || formData.constraints || 'Competing priorities and lack of awareness.'}
 
-${formData.internalRequired === 'Yes' ? `### INTERNAL AUDIENCES ENABLEMENT:
-* **Target Internal Teams:** ${formData.internalAudience.join(', ')}
-* **Core Internal Message:** *"${formData.internalMessage || 'Simplify your tasks with this new update!'}"*
-* **Required Enablement Materials:** ${formData.internalSupport.join(', ')}` : ''}
+## 3. GOALS & MEASUREMENT
+* **Primary Business Objective:** ${formData.primaryObjective.join(', ') || 'Adoption and Compliance'}
+* **Definition of Success:** ${formData.successDefinition || 'Achieving targeted rollout milestones.'}
+* **Primary KPI:** ${formData.primaryKpi || 'Adoption Rate %'}
+* **Secondary KPI:** ${formData.secondaryKpi || 'N/A'}
 
-## PMM CHECKLIST: NEXT STEPS
-Here is your highly detailed, actionable **${timelineText}** GTM preparation playbook:
+## 4. CHANNELS & ENABLEMENT
+* **Active Channels to Leverage:** ${formData.channels.join(', ') || 'Internal Comms, Slack, Direct Email'}
+* **Internal Store Involvement:** ${formData.storeInvolvement}
+* **Support Materials Planned:** ${formData.internalSupport.join(', ') || 'Training decks and quick-guides.'}
+* **Core Message to Teammates:** "${formData.internalMessage || 'Work simpler, not harder.'}"
 
-* **Phase 1: Alignment, Readiness & Compliance (${step1Time})**
-    * **Step 1.1 - Local Stakeholder Synchro:** Set up a 30-minute kickoff with local PMMs and Country Relays. Present the "Why Now" operational rationale to secure early regional buy-in.
-    * **Step 1.2 - Legal & Compliance Gate:** Contact local legal partners to validate Terms & Conditions (T&C) updates, specifically reviewing compliance regarding data protection or local operational regulations. Complete this 4 weeks before Go-Live.
-    * **Step 1.3 - Technical Freeze Setup:** Coordinate with the Core Product/Tech team to lock codebase configurations. Ensure no experimental features are introduced during this freeze to guarantee environment stability.
-    * **Step 1.4 - Baseline KPI Measurement:** Establish current baseline metrics for **${formData.primaryKpi || 'Adoption Rate %'}** to ensure clean post-launch comparison tracking.
+---
 
-* **Phase 2: Assets & Localized Enablement (${step2Time})**
-    * **Step 2.1 - Training Material Production:** Draft the comprehensive teammate training deck. Partner with local country relays to translate the deck and run mock demo simulations.
-    * **Step 2.2 - Digital & Retail Asset Setup:** If external, build and finalize the landing page (using **Nemo**). If store involvement is required, design localized physical price balisage (A4/A3 layouts) clearly highlighting the "from" price and core customer benefits.
-    * **Step 2.3 - Morning Briefing Runbook:** Write a 1-page "WIIFM" (What's In It For Me) briefing guide for Store Department Managers to use during morning huddles to keep floor teammates aligned and excited.
+### REQUIRED OUTPUT FORMAT:
+Using the Decathlon GTM Framework, generate a complete strategy following this exact structure:
 
-* **Phase 3: Pilot & Launch Campaign (${step3Time})**
-    * **Step 3.1 - Run Golden Order Tests:** Conduct 3-5 end-to-end "Golden Orders" with pilot store departments/users to identify any system bugs or workflow friction points.
-    * **Step 3.2 - Teammate Briefing Go-Live:** Share the Training Kit with targeted internal teams. Instruct in-store/country relays to set up local digital banners on the **Nemo** landing page, app homepage (**Dynaco**), or internal communications (Slack/Workplace).
-    * **Step 3.3 - Sync All Instances:** Coordinate the automated Go-Live date with local systems. Keep local support contacts in place for immediate troubleshooting.
+**1. EXECUTIVE SUMMARY:** A 3-sentence sharp summary of what we are doing, why, and the expected business value.
+**2. POSITIONING & MESSAGING:** Provide 1 main hero headline and 3 supporting bullet points tailored to the target audience. Address their specific barriers.
+**3. MULTI-CHANNEL ACTIVATION PLAN:** Break down exactly how we will use the selected channels. Give a specific tactic for each.
+**4. PHASED EXECUTION ROADMAP:** Create a realistic timeline (Pre-Launch, Launch, Post-Launch) with 2-3 bulleted action items per phase. 
+**5. MEASUREMENT & FEEDBACK LOOP:** How will we track the Primary KPI? Propose a specific feedback loop mechanism (e.g., Medallia survey, Tableau dashboard) to capture user sentiment post-launch.
+**6. RISK MITIGATION:** Based on the barriers provided, identify the biggest risk to this launch and provide a concrete mitigation tactic.`;
 
-* **Phase 4: Post-Launch & Scaling (Post-Launch)**
-    * **Step 4.1 - Tableau Dashboard Tracking:** Monitor the active Tableau reporting suite daily to track **${formData.primaryKpi || 'Adoption Rate %'}** progress against targeted success criteria.
-    * **Step 4.2 - Deploy Medallia Survey Loop:** Automatically trigger the post-experience CSAT survey. Address any immediate user complaints flagged by the survey team.
-    * **Step 4.3 - Run Feedback Post-Mortem:** Schedule a retrospective session with local teams after week 2 to evaluate adoption, operational velocity, and discuss future scaling.
-
-## RISK MITIGATION
-* **Top Risk Identified:** *"${formData.biggestRisk || 'Low adoption or awareness'}"*
-* **Mitigation Strategy:** Establish clear ownership between the United (Global) and Local teams. Run interactive training sessions to remove complexity barriers early.`;
-
-          setStrategy(generatedContent);
+          setStrategy(generatedPrompt);
           setCurrentStep(5);
           
           setChatMessages([{ 
             role: 'ai', 
-            text: `Hi! I've built your custom GTM strategy for **${formData.campaignName || 'your project'}**. Let's refine this to make sure we haven't made any unrealistic assumptions. 
-\nWhich part should we look at? Ask me to tweak the **timeline**, refine the **KPI tracking**, or brain storm some **training materials**!` 
+            text: `Hi! I've compiled all your inputs into an **Expert-Level LLM Prompt**. \n\nBecause this app runs offline, the best way to get a deeply customized strategy is to click the **Copy** button above, and paste this entire text into **Gemini** or **NotebookLM**. \n\nLet me know if you want to tweak the inputs before you copy it!` 
           }]);
           setLoading(false);
         }, 1000);
